@@ -14,7 +14,7 @@ const rl = readline.createInterface({
 });
 const authUrl = oAuth2Client.generateAuthUrl({
   access_type: 'offline',
-  scope: ['https://www.googleapis.com/auth/gmail.modify', 'https://www.googleapis.com/auth/gmail.compose'],
+  scope: ['https://www.googleapis.com/auth/gmail.modify', 'https://www.googleapis.com/auth/gmail.compose','https://www.googleapis.com/auth/gmail.readonly'],
 });
 console.log('Authorize this app by visiting this url:', authUrl);
 rl.question('Enter the code from that page here: ', (code) => {
@@ -34,16 +34,18 @@ const checkEmails = async () => {
   try {
     // Retrieve the latest 10 messages from your inbox
     const res = await gmail.users.messages.list({
-      userId: 'me',
+      userId: 'ghoghaatif27@gmail.com',
       maxResults:10,
-      q: 'is:unread',
+      q:'is:unread',
     });
+
+    console.log(res.messages);
 
     // Check if each email thread has any prior replies
     const threads = res.data.messages;
     for (const thread of threads) {
       const threadId = thread.threadId;
-      const threadRes = await gmail.users.threads.get({userId: 'me', id: threadId});
+      const threadRes = await gmail.users.threads.get({userId: 'ghoghaatif27@gmail.com', id: threadId});
       const messages = threadRes.data.messages;
       const firstMessage = messages[0];
 
@@ -51,7 +53,7 @@ const checkEmails = async () => {
       if (firstMessage.labelIds.indexOf('SENT') === -1) {
         const message = 'Thank you for your email! I am currently out of the office and will respond when I return.';
         await gmail.users.messages.send({
-          userId: 'me',
+          userId: 'ghoghaatif27@gmail.com',
           requestBody: {
             raw: message,
           },
@@ -64,7 +66,7 @@ const checkEmails = async () => {
         const labelExists = labels.some(label => label.name === labelName);
         if (!labelExists) {
           await gmail.users.labels.create({
-            userId: 'me',
+            userId: 'ghoghaatif27@gmail.com',
             requestBody: {
               name: labelName,
               labelListVisibility: 'labelShow',
@@ -73,7 +75,7 @@ const checkEmails = async () => {
           });
         }
         const addLabelRes = await gmail.users.messages.modify({
-          userId: 'me',
+          userId: 'ghoghaatif27@gmail.com',
           id: threadId,
           requestBody: {
             addLabelIds: [labelName],
