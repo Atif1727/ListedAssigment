@@ -35,7 +35,7 @@ const checkEmails = async () => {
     // Retrieve the latest 10 messages from your inbox
     const res = await gmail.users.messages.list({
       userId: 'ghoghaatif27@gmail.com',
-      maxResults:10,
+      maxResults:5,
       q:'is:unread',
     });
 
@@ -55,6 +55,7 @@ const checkEmails = async () => {
 
     // Check if each email thread has any prior replies
     const threads = res.data.messages;
+    console.log(threads);
     for (const thread of threads) {
       const threadId = thread.threadId;
       const threadRes = await gmail.users.threads.get({userId: 'ghoghaatif27@gmail.com', id: threadId});
@@ -66,7 +67,7 @@ const checkEmails = async () => {
 
         const res = await gmail.users.threads.get({
           userId: 'ghoghaatif27@gmail.com',
-          id: firstMessage.threadId,
+          id:firstMessage.threadId,
           format: 'metadata',
           metadataHeaders: ['To']
         });
@@ -93,14 +94,14 @@ const checkEmails = async () => {
         });
       
         // Add a label to the email and move it to the label
-        const labelName = 'Vacation';
+        const labelName = 'IMPORTANT';
         const labelRes = await gmail.users.labels.list({userId: 'ghoghaatif27@gmail.com'});
         const labels = labelRes.data.labels;
         console.log(labels);
         const labelExists = labels.some(label => label.name === labelName);
         if(labelExists) console.log('Exits');
         else console.log('No labels found');
-        if (!labelExists) {
+        if (!labelExists) {//if label is not found then this will create a new label called Vacation
           await gmail.users.labels.create({
             userId: 'ghoghaatif27@gmail.com',
             requestBody: {
@@ -110,14 +111,15 @@ const checkEmails = async () => {
             },
           });
         }
-        const addLabelRes =gmail.users.messages.modify({
+        const addLabelRes =await gmail.users.threads.modify({
           userId: 'ghoghaatif27@gmail.com',
           id:threadId,
-          requestBody: {
-            addLabelIds: [labelName]
+          resource: {
+            addLabelIds: [labelName],
+            removeLabelIds: [],
           },
         });
-        console.log(`Added label ${labelName} to email ${firstMessage.threadId}`);
+        console.log(`Added label ${labelName} to email ${threadId}`);
       }
     }
   } catch (err) {
