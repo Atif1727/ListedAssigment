@@ -14,7 +14,7 @@ const rl = readline.createInterface({
 });
 const authUrl = oAuth2Client.generateAuthUrl({
   access_type: 'offline',
-  scope: ['https://www.googleapis.com/auth/gmail.modify', 'https://www.googleapis.com/auth/gmail.compose','https://www.googleapis.com/auth/gmail.readonly'],
+  scope: ['https://www.googleapis.com/auth/gmail.modify', 'https://www.googleapis.com/auth/gmail.compose','https://www.googleapis.com/auth/gmail.readonly','https://www.googleapis.com/auth/gmail.labels'],
 });
 console.log('Authorize this app by visiting this url:', authUrl);
 rl.question('Enter the code from that page here: ', (code) => {
@@ -39,7 +39,19 @@ const checkEmails = async () => {
       q:'is:unread',
     });
 
-    console.log(res.messages);
+    for (let i = 0; i < res.data.messages.length; i++) {
+      const message = await gmail.users.messages.get({
+        userId: 'ghoghaatif27@gmail.com',
+        id: res.data.messages[i].id,
+      });
+
+      // Extract the relevant information from the message object and log it
+      const subject = message.data.payload.headers.find(header => header.name === 'Subject').value;
+      const from = message.data.payload.headers.find(header => header.name === 'From').value;
+      const date = message.data.payload.headers.find(header => header.name === 'Date').value;
+      console.log(`[${date}] ${from}: ${subject}`);
+    }
+
 
     // Check if each email thread has any prior replies
     const threads = res.data.messages;
@@ -51,19 +63,43 @@ const checkEmails = async () => {
 
       // If the email thread has no prior replies, send a reply
       if (firstMessage.labelIds.indexOf('SENT') === -1) {
-        const message = 'Thank you for your email! I am currently out of the office and will respond when I return.';
-        await gmail.users.messages.send({
+
+        const res = await gmail.users.threads.get({
+          userId: 'ghoghaatif27@gmail.com',
+          id: firstMessage.threadId,
+          format: 'metadata',
+          metadataHeaders: ['To']
+        });
+    
+        const headers = res.data.messages[0].payload.headers;
+        const toHeader = headers.find(header => header.name === 'To');
+        const recipient = toHeader.value;
+    
+        const message = 'To: ' + recipient + '\n' +
+                        'Subject: Test email\n\n' +
+                        'Thank you for your email! I am currently out of the office and will respond when I return.';
+    
+        const encodedMessage = Buffer.from(message)
+                                  .toString('base64')
+                                  .replace(/\+/g, '-')
+                                  .replace(/\//g, '_')
+                                  .replace(/=+$/, '');
+    
+        const sendRequest = await gmail.users.messages.send({
           userId: 'ghoghaatif27@gmail.com',
           requestBody: {
-            raw: message,
-          },
+            raw: encodedMessage
+          }
         });
-
+      
         // Add a label to the email and move it to the label
         const labelName = 'Vacation';
-        const labelRes = await gmail.users.labels.list({userId: 'me'});
+        const labelRes = await gmail.users.labels.list({userId: 'ghoghaatif27@gmail.com'});
         const labels = labelRes.data.labels;
+        console.log(labels);
         const labelExists = labels.some(label => label.name === labelName);
+        if(labelExists) console.log('Exits');
+        else console.log('No labels found');
         if (!labelExists) {
           await gmail.users.labels.create({
             userId: 'ghoghaatif27@gmail.com',
@@ -74,15 +110,14 @@ const checkEmails = async () => {
             },
           });
         }
-        const addLabelRes = await gmail.users.messages.modify({
+        const addLabelRes =gmail.users.messages.modify({
           userId: 'ghoghaatif27@gmail.com',
-          id: threadId,
+          id:threadId,
           requestBody: {
-            addLabelIds: [labelName],
-            removeLabelIds: ['INBOX'],
+            addLabelIds: [labelName]
           },
         });
-        console.log(`Added label ${labelName} to email ${threadId}`);
+        console.log(`Added label ${labelName} to email ${firstMessage.threadId}`);
       }
     }
   } catch (err) {
@@ -101,3 +136,4 @@ const repeatCheckEmails = () => {
     }, interval);
 };
 
+repeatCheckEmails();
