@@ -72,11 +72,11 @@ const checkEmails = async () => {
           metadataHeaders: ['To']
         });
     
-        const headers = res.data.messages[0].payload.headers;
-        const toHeader = headers.find(header => header.name === 'To');
-        const recipient = toHeader.value;
+        const headers = firstMessage.payload.headers;
+        const fromHeader = headers.find(header => header.name === 'From');
+        const sender = fromHeader.value;
     
-        const message = 'To: ' + recipient + '\n' +
+        const message = 'To: ' + sender + '\n' +
                         'Subject: Test email\n\n' +
                         'Thank you for your email! I am currently out of the office and will respond when I return.';
     
